@@ -208,6 +208,34 @@ function dmrg(H::MPO, Ms::Vector{MPS}, psi0::MPS, sweeps::Sweeps; kwargs...)
   return dmrg(PMM, psi0, sweeps; kwargs...)
 end
 
+
+
+function dmrg(Hs::Vector{MPO},Ms::Vector{MPS}, psi0::MPS, sweeps::Sweeps; kwargs...)
+  for H in Hs
+    check_hascommoninds(siteinds, H, psi0)
+    check_hascommoninds(siteinds, H, psi0')
+  end
+  for M in Ms
+      check_hascommoninds(siteinds, M, psi0)
+  end
+
+  Hs .= permute.(Hs, Ref((linkind, siteinds, linkind)))
+  Ms .= permute.(Ms, Ref((linkind, siteinds, linkind)))
+
+
+  weight = get(kwargs, :weight, 1.0)
+  if weight <= 0.0
+    error(
+      "weight parameter should be > 0.0 in call to excited-state dmrg (value passed was weight=$weight)",
+    )
+  end
+
+  PMSM = ProjMPOSum_MPS(Hs, Ms; weight=weight)
+  return dmrg(PMSM, psi0, sweeps; kwargs...)
+end
+
+
+
 function dmrg(PH, psi0::MPS, sweeps::Sweeps; kwargs...)
   if length(psi0) == 1
     error(
